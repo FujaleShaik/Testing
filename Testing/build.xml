@@ -175,17 +175,5 @@
             </extargs>
         </call-php>
     </target>
-
-    <!-- ========================================================================================================= -->
-
-    <!-- Documentation generation using phpdox -->
-    <target name="phpdox"
-        description="Generate project documentation using phpDox">
-        <call-php failOnError="false">
-            <extargs>
-                <arg value="${basedir}/vendor/theseer/phpdox/phpdox"/>
-            </extargs>
-        </call-php>
-    </target>
     
 </project>
