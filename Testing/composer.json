@@ -2,7 +2,7 @@
     "name":     "continuousphptest/workflow-test",
     "homepage": "http://continuousphp.com/",
     "require":  {
-        "php": ">=5.6.24"
+        "php": ">=5.6.4"
     },
     "require-dev": {
         "squizlabs/php_codesniffer": "~2.5.0",
