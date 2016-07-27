@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE project>
+<project name="Testing" default="build">
+    <!-- By default, we assume all tools to be on the $PATH -->
+    <!-- <property name="toolsdir" value="" /> -->
+
+    <!-- Uncomment the following when the tools are in ${basedir}/vendor/bin -->
+    <property name="toolsdir" value="${basedir}/Testing/vendor/bin/" />
+
+    <condition property="dllext" value="dll" else="so">
+        <os family="windows" />
+    </condition>
+    
+    <condition property="dllsuff" value="php_" else="">
+        <os family="windows" />
+    </condition>
+    
+    <!-- ========================================================================================================= -->
+    
+    <macrodef name="call-php">
+        <attribute name="failOnError" default="true"/>
+        <element name="extArgs" optional="n"/>
+        <sequential>
+            <exec executable="php" outputproperty="phpextdir" failonerror="true">
+                <arg value="-r echo ini_get('extension_dir');"/>
+            </exec>
+            <exec executable="php" resultproperty="exitcode" failonerror="@{failOnError}">
+                <!--
+                <arg value="-n"/>
+                <arg value="-dextension=${phpextdir}/${dllsuff}curl.${dllext}" />
+                <arg value="-dextension=${phpextdir}/${dllsuff}fileinfo.${dllext}" />
+                <arg value="-dextension=${phpextdir}/${dllsuff}mbstring.${dllext}" />
+                <arg value="-dextension=${phpextdir}/${dllsuff}openssl.${dllext}" />
+                <arg value="-dextension=${phpextdir}/${dllsuff}pdo_mysql.${dllext}" />
+                <arg value="-dextension=${phpextdir}/${dllsuff}pdo_pgsql.${dllext}" />
+                <arg value="-dextension=${phpextdir}/${dllsuff}pdo_sqlite.${dllext}" />
+                <arg value="-dextension=${phpextdir}/${dllsuff}phar.${dllext}" />
+                <arg value="-dextension=${phpextdir}/${dllsuff}sockets.${dllext}" />
+                <arg value="-dextension=${phpextdir}/${dllsuff}xsl.${dllext}" />
+                -->
+                <extArgs/>
+            </exec>
+        </sequential>
+    </macrodef>
+    
+    <!-- ========================================================================================================= -->
+
+    <!-- Default build target -->
+    <target name="build"
+        depends="prepare,update-deps,lint,phploc-ci,pdepend,phpmd-ci,phpcs-ci,phpcpd-ci,phpdox"
+        description="Run a default build" />
+
+    <!-- Parallel build target -->
+    <target name="build-parallel" depends="prepare,update-deps,lint,tools-parallel,phpdox"
+        description="Run a parallel executing tasks build" />
+
+    <!-- Perform a build without without updating the dependencies -->
+    <target name="no-update" depends="prepare,lint,tools-parallel,phpdox"
+        description="Runs build without updating dependencies" />
+
+    <!-- ========================================================================================================= -->
+    
+    <!-- Clean the build directory -->
+    <target name="clean" unless="clean.done" description="Cleanup build artifacts">
+        <delete dir="${basedir}/build/api" />
+        <delete dir="${basedir}/build/coverage" />
+        <delete dir="${basedir}/build/logs" />
+        <delete dir="${basedir}/build/pdepend" />
+        <delete dir="${basedir}/build/phpdox" />
+        <property name="clean.done" value="true" />
+    </target>
+
+    <!-- ========================================================================================================= -->
+    
+    <!-- Retrieve composer.phar -->
+    <target name="get-composer"
+        description="Retrieve composer from remote">
+        <get src="https://getcomposer.org/composer.phar" dest="composer.phar"/>
+    </target>
+    
+    <!-- Update the dependencies using composer (enabled by default) -->
+    <target name="update-deps" depends="get-composer"
+        description="Runs build including updating depedendencies">
+        <call-php>
+            <extargs>
+                <arg value="composer.phar" />
+                <arg value="update" />
+            </extargs>
+        </call-php>
+    </target>
+
+    <!-- ========================================================================================================= -->
+        
+    <!-- Perform a parallel build of various tasks -->
+    <target name="tools-parallel" description="Run tools in parallel">
+        <parallel threadCount="2">
+            <sequential>
+                <antcall target="pdepend" />
+                <antcall target="phpmd-ci" />
+            </sequential>
+            <antcall target="phpcpd-ci" />
+            <antcall target="phpcs-ci" />
+            <antcall target="phploc-ci" />
+        </parallel>
+    </target>
+
+    <!-- Prepare task -->
+    <target name="prepare" unless="prepare.done" depends="clean"
+        description="Prepare for build by creating essential directories">
+        <mkdir dir="${basedir}/build/api" />
+        <mkdir dir="${basedir}/build/coverage" />
+        <mkdir dir="${basedir}/build/logs" />
+        <mkdir dir="${basedir}/build/pdepend" />
+        <mkdir dir="${basedir}/build/phpdox" />
+        <property name="prepare.done" value="true" />
+    </target>
+
+    <!-- ========================================================================================================= -->
+
+        <!-- General source code syntax check -->
+    <target name="lint" description="Perform syntax check of sourcecode files">
+        <apply executable="php" failonerror="false">
+            <arg value="-l" />
+
+            <fileset dir="${basedir}/Testing">
+                <include name="**/*.php" />
+                <modified />
+            </fileset>
+            
+        </apply>
+    </target>
+
+    <!-- ========================================================================================================= -->
+
+    <!-- Checkstyle for continous integration -->
+    <target name="phpcs-ci" depends="prepare"
+        description="Find coding standard violations using PHP_CodeSniffer and log result in XML format. Intended for usage within a continuous integration environment.">
+        <call-php failOnError="false">
+            <extargs>
+                <arg value="${basedir}/vendor/squizlabs/php_codesniffer/scripts/phpcs"/>
+                <arg value="--report=checkstyle" />
+                <arg value="--report-file=${basedir}/build/logs/checkstyle.xml" />
+                <arg value="--standard=PSR2" />
+                <arg value="--extensions=php" />
+                <arg value="--ignore=autoload.php" />
+                <arg path="${basedir}/Testing" />
+            </extargs>
+        </call-php>
+    </target>
+
+    <!-- ========================================================================================================= -->
+    
+    <!-- Copy&Paste detection -->
+    <target name="phpcpd"
+        description="Find duplicate code using PHPCPD and print human readable output. Intended for usage on the command line before committing." >
+        <call-php failOnError="false">
+            <extargs>
+                <arg value="${basedir}/vendor/sebastian/phpcpd/phpcpd"/>
+                <arg path="${basedir}/Testing" />
+            </extargs>
+        </call-php>
+    </target>
+
+    <!-- ========================================================================================================= -->
+
+    <!-- Copy&Paste detection for continous integration -->
+    <target name="phpcpd-ci" depends="prepare"
+        description="Find duplicate code using PHPCPD and log result in XML format. Intended for usage within a continuous integration environment.">
+        <call-php failOnError="false">
+            <extargs>
+                <arg value="${basedir}/vendor/sebastian/phpcpd/phpcpd"/>
+                <arg value="--log-pmd" />
+                <arg path="${basedir}/build/logs/pmd-cpd.xml" />
+                <arg path="${basedir}/Testing" />
+            </extargs>
+        </call-php>
+    </target>
+
+    <!-- ========================================================================================================= -->
+
+    <!-- Documentation generation using phpdox -->
+    <target name="phpdox"
+        description="Generate project documentation using phpDox">
+        <call-php failOnError="false">
+            <extargs>
+                <arg value="${basedir}/vendor/theseer/phpdox/phpdox"/>
+            </extargs>
+        </call-php>
+    </target>
+    
+</project>
