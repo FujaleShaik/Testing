@@ -1,12 +1,12 @@
 {
-	"description": "The Testing Application",
-	"name": "PHP",
-	"type": "project",
-	"homepage": "https://testing.com",
-	"license": "MIT",
-	"require-dev": {
-		"squizlabs/php_codesniffer": "~2.5.0",
-                "phpunit/phpunit": "~5.6",
-                "phpunit/coverage.phpunit": "~5.6"
-	}
+    "name":     "continuousphptest/workflow-test",
+    "homepage": "http://continuousphp.com/",
+    "require":  {
+        "php": ">=5.6.24"
+    },
+    "require-dev": {
+        "squizlabs/php_codesniffer": "~2.5.0",
+        "phpunit/phpunit": "~5.6",
+        "phpunit/coverage.phpunit": "~5.6"
+    }
 }
