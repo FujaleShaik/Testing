@@ -1,0 +1,11 @@
+{
+	"description": "The Testing Application",
+	"name": "PHP",
+	"type": "project",
+	"homepage": "https://testing.com",
+	"license": "MIT",
+	"require-dev": {
+		"squizlabs/php_codesniffer": "~2.5.0",
+                "phpunit/phpunit": "~5.1"
+	}
+}
